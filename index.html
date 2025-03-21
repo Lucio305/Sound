@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Simulación del Sonido con Micrófono</title>
+    <style>
+        body {
+            text-align: center;
+            font-family: Arial, sans-serif;
+            background-color: #111;
+            color: white;
+        }
+        canvas {
+            background-color: black;
+            display: block;
+            margin: auto;
+            border: 1px solid white;
+        }
+        .info {
+            margin-top: 20px;
+            font-size: 18px;
+        }
+    </style>
+</head>
+<body>
+
+    <h1>🎤 Simulación de Onda de Sonido</h1>
+    <canvas id="waveCanvas"></canvas>
+
+    <p id="micInfo" class="info">Esperando acceso al micrófono...</p>
+
+    <script>
+        const canvas = document.getElementById("waveCanvas");
+        const ctx = canvas.getContext("2d");
+
+        canvas.width = window.innerWidth * 0.9;
+        canvas.height = 300;
+
+        const micInfo = document.getElementById("micInfo");
+
+        // Verificar si el navegador soporta la API de Web Audio
+        if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
+            micInfo.textContent = 'Tu navegador no soporta el acceso al micrófono.';
+            alert('Tu navegador no soporta la API de acceso al micrófono.');
+        }
+
+        // Configuración de Web Audio API
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let analyser;
+        let bufferLength;
+        let dataArray;
+
+        // Solicitar acceso al micrófono
+        navigator.mediaDevices.getUserMedia({ audio: true })
+            .then(stream => {
+                // Conectar micrófono al audio context
+                const source = audioContext.createMediaStreamSource(stream);
+                analyser = audioContext.createAnalyser();
+                analyser.fftSize = 256;  // Tamaño del FFT
+                bufferLength = analyser.frequencyBinCount;
+                dataArray = new Uint8Array(bufferLength);
+
+                source.connect(analyser);
+                micInfo.textContent = 'Capturando sonido del micrófono...';
+                drawWave();
+            })
+            .catch(err => {
+                micInfo.textContent = 'Error al acceder al micrófono: ' + err;
+                console.error('Error al acceder al micrófono: ', err);
+            });
+
+        function drawWave() {
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Obtener los datos de la frecuencia y amplitud
+            analyser.getByteFrequencyData(dataArray);
+
+            // Dibujar la onda
+            ctx.strokeStyle = 'cyan';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+
+            const barWidth = canvas.width / bufferLength;
+            let x = 0;
+
+            for (let i = 0; i < bufferLength; i++) {
+                const barHeight = dataArray[i];
+
+                ctx.fillStyle = `rgb(${barHeight + 100}, ${250 - barHeight / 2}, ${barHeight / 2})`;
+
+                ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
+                x += barWidth;
+            }
+
+            micInfo.textContent = 'Intensidad de sonido: ' + Math.max(...dataArray) + ' dB';
+            requestAnimationFrame(drawWave);
+        }
+    </script>
+
+</body>
+</html>
