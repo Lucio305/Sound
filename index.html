@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Simulación del Sonido con Micrófono</title>
+    <title>Simulación de Onda de Sonido con Micrófono</title>
     <style>
         body {
             text-align: center;
@@ -45,7 +45,7 @@
             alert('Tu navegador no soporta la API de acceso al micrófono.');
         }
 
-        // Configuración de Web Audio API
+        // Crear el contexto de audio
         const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         let analyser;
         let bufferLength;
@@ -54,10 +54,10 @@
         // Solicitar acceso al micrófono
         navigator.mediaDevices.getUserMedia({ audio: true })
             .then(stream => {
-                // Conectar micrófono al audio context
+                // Conectar el micrófono al audio context
                 const source = audioContext.createMediaStreamSource(stream);
                 analyser = audioContext.createAnalyser();
-                analyser.fftSize = 256;  // Tamaño del FFT
+                analyser.fftSize = 256;  // Tamaño de FFT
                 bufferLength = analyser.frequencyBinCount;
                 dataArray = new Uint8Array(bufferLength);
 
@@ -66,14 +66,15 @@
                 drawWave();
             })
             .catch(err => {
-                micInfo.textContent = 'Error al acceder al micrófono: ' + err;
-                console.error('Error al acceder al micrófono: ', err);
+                console.error('Error al acceder al micrófono:', err);
+                micInfo.textContent = 'Error al acceder al micrófono: ' + err.message;
             });
 
+        // Función para dibujar la onda de sonido
         function drawWave() {
             ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-            // Obtener los datos de la frecuencia y amplitud
+            // Obtener datos de la frecuencia y amplitud
             analyser.getByteFrequencyData(dataArray);
 
             // Dibujar la onda
@@ -84,16 +85,22 @@
             const barWidth = canvas.width / bufferLength;
             let x = 0;
 
+            // Dibujar cada barra que representa una frecuencia
             for (let i = 0; i < bufferLength; i++) {
                 const barHeight = dataArray[i];
 
+                // Colorear cada barra en función de su altura
                 ctx.fillStyle = `rgb(${barHeight + 100}, ${250 - barHeight / 2}, ${barHeight / 2})`;
 
+                // Dibujar la barra (barra de la onda)
                 ctx.fillRect(x, canvas.height - barHeight, barWidth, barHeight);
                 x += barWidth;
             }
 
+            // Actualizar la información de la intensidad
             micInfo.textContent = 'Intensidad de sonido: ' + Math.max(...dataArray) + ' dB';
+
+            // Continuar dibujando la onda
             requestAnimationFrame(drawWave);
         }
     </script>
